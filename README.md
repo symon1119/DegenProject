@@ -38,9 +38,9 @@ contract Degen is ERC20, Ownable {
         return true; 
     }
 
-    function redeemTickets(uint256 amount) external {
+    function redeemTickets(address to, uint256 amount) external {
         require(balanceOf(msg.sender) >= amount, "Insufficient ticket balance");
-        _burn(msg.sender, amount);
+        _transfer(_msgSender(), to, amount); 
         emit TicketRedeemed(msg.sender, amount);
     }   
 
