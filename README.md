@@ -1,6 +1,6 @@
 # DegenProject
 ## Description
- Creating ERC20 Token and deploy it on the Avalanche network for Degen Gaming with different functions such as Minting, Transferring, Redeeming, Checking Balance, and Burning.
+ Creating ERC20 Token and deploying it on the Avalanche network for Degen Gaming with different functions such as Minting, Transferring, Redeeming, Checking Balance, and Burning. The inspiration for this code is the prepaid load that we use daily, an example of that is the prepaid load in Globe Network because the user can redeem the point to have load.
 
 ## Getting Started
 
@@ -10,71 +10,80 @@ To run this program, you can use Remix, an online Solidity IDE. To get started, 
 Once you are on the Remix website, create a new file by clicking on the file icon in the left-hand sidebar. Save the file with a .sol extension (e.g., Degen.sol). Copy and paste the following code into the file:
 
 ```
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Degen is ERC20, Ownable {
-    event TicketTransferred(address indexed from, address indexed to, uint256 amount);
-    event TicketListingCreated(uint256 listingId, address indexed seller, uint256 ticketCount, uint256 price);
-    event TicketPurchased(address indexed buyer, uint256 listingId, uint256 ticketCount, uint256 totalPrice);
-    event TicketRedeemed(address indexed redeemer, uint256 ticketCount);
+    event LoadTransferred(address indexed from, address indexed to, uint256 amount);
+    event LoadListingCreated(uint256 indexed listingId, address indexed seller, uint256 loadAmount, uint256 price);
+    event LoadPurchased(address indexed buyer, uint256 indexed listingId, uint256 loadAmount, uint256 totalPrice);
+    event LoadRedeemed(address indexed redeemer, uint256 loadAmount);
 
-    struct TicketListing { address seller; uint256 ticketCount; uint256 price; }
+    struct LoadListing { 
+        address seller; 
+        uint256 loadAmount; 
+        uint256 price; 
+    }
 
-    mapping(uint256 => TicketListing) public ticketListings;
+    mapping(uint256 => LoadListing) public loadListings;
     uint256 public listingCounter;
 
-    constructor(address initialOwner) Ownable(initialOwner) ERC20("Degen", "DGN") {}
+    constructor(address initialOwner) ERC20("PrepaidLoad", "PLD") Ownable(initialOwner) {}
 
-    function mint(address to, uint256 amount) external onlyOwner { _mint(to, amount); }
+    function mint(address to, uint256 amount) external onlyOwner { 
+        _mint(to, amount); 
+    }
 
-    function burn(uint256 amount) external { _burn(msg.sender, amount); }
+    function burn(uint256 amount) external { 
+        _burn(_msgSender(), amount); 
+    }
 
     function transfer(address to, uint256 amount) public override returns (bool) { 
         _transfer(_msgSender(), to, amount); 
-        emit TicketTransferred(_msgSender(), to, amount);
+        emit LoadTransferred(_msgSender(), to, amount);
         return true; 
     }
 
-    function redeemTickets(address to, uint256 amount) external {
-        require(balanceOf(msg.sender) >= amount, "Insufficient ticket balance");
+    function redeemLoad(address to, uint256 amount) external {
+        require(balanceOf(msg.sender) >= amount, "Insufficient battle pass balance");
         _transfer(_msgSender(), to, amount); 
-        emit TicketRedeemed(msg.sender, amount);
+        emit LoadRedeemed(msg.sender, amount);
     }   
 
-    function createTicketListing(uint256 ticketCount, uint256 price) external {
-        require(ticketCount > 0, "Ticket count must be greater than zero");
+    function createLoadListing(uint256 loadAmount, uint256 price) external {
+        require(loadAmount > 0, "Load amount must be greater than zero");
         require(price > 0, "Price must be greater than zero");
 
         uint256 listingId = listingCounter++; // Generate unique listing ID
-        ticketListings[listingId] = TicketListing({
-            seller: msg.sender,
-            ticketCount: ticketCount,
+        loadListings[listingId] = LoadListing({
+            seller: _msgSender(),
+            loadAmount: loadAmount,
             price: price
         });
-        emit TicketListingCreated(listingId, msg.sender, ticketCount, price);
+        emit LoadListingCreated(listingId, _msgSender(), loadAmount, price);
     }
 
-    function purchaseTickets(uint256 listingId, uint256 ticketCount) external {
-        TicketListing storage listing = ticketListings[listingId];
-        require(listing.ticketCount >= ticketCount, "Insufficient tickets available");
-        uint256 totalPrice = listing.price * ticketCount;
-        require(balanceOf(msg.sender) >= totalPrice, "Insufficient balance to purchase tickets");
+    function purchaseLoad(uint256 listingId, uint256 loadAmount) external {
+        LoadListing storage listing = loadListings[listingId];
+        require(listing.loadAmount >= loadAmount, "Insufficient load available");
+        uint256 totalPrice = listing.price * loadAmount;
+        require(balanceOf(_msgSender()) >= totalPrice, "Insufficient balance to purchase load");
 
-        _transfer(msg.sender, listing.seller, totalPrice);
-        _transfer(listing.seller, msg.sender, ticketCount);
-        listing.ticketCount -= ticketCount;
-        emit TicketPurchased(msg.sender, listingId, ticketCount, totalPrice);
+        _transfer(_msgSender(), listing.seller, totalPrice);
+        _transfer(listing.seller, _msgSender(), loadAmount);
+        listing.loadAmount -= loadAmount;
+        emit LoadPurchased(_msgSender(), listingId, loadAmount, totalPrice);
     }
 
-    function getListing(uint256 listingId) external view returns (address seller, uint256 ticketCount, uint256 price) {
-        TicketListing storage listing = ticketListings[listingId];
-        return (listing.seller, listing.ticketCount, listing.price);
+    function getListing(uint256 listingId) external view returns (address seller, uint256 loadAmount, uint256 price) {
+        LoadListing storage listing = loadListings[listingId];
+        return (listing.seller, listing.loadAmount, listing.price);
     }
 
-    function checkTicketBalance(address account) external view returns (uint256) { 
+    function checkLoadBalance(address account) external view returns (uint256) { 
         return balanceOf(account); 
     }
 }
